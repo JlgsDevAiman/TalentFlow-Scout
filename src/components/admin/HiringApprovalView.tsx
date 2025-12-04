@@ -372,7 +372,6 @@ ${emailPreview.senderName}`;
     try {
       await uploadAssessmentReport(candidateId, file);
       await loadCandidates();
-      alert('Assessment report uploaded successfully!');
     } catch (error) {
       console.error('Error uploading assessment report:', error);
       alert('Failed to upload assessment report');
@@ -389,7 +388,6 @@ ${emailPreview.senderName}`;
     try {
       await updateAssessmentScore(candidateId, score);
       await loadCandidates();
-      alert('Assessment score saved successfully!');
     } catch (error) {
       console.error('Error saving assessment score:', error);
       alert('Failed to save assessment score');
@@ -401,7 +399,6 @@ ${emailPreview.senderName}`;
     try {
       await uploadBackgroundCheckDocument(candidateId, file);
       await loadCandidates();
-      alert('Background check document uploaded successfully!');
     } catch (error) {
       console.error('Error uploading document:', error);
       alert('Failed to upload document');
@@ -482,7 +479,6 @@ ${emailPreview.senderName}`;
 
       setShowSalaryForm(null);
       setSalaryFormData({ basicSalary: '', allowances: [] });
-      alert('Salary package saved successfully!');
     } catch (error: any) {
       console.error('Error saving salary package:', error);
       alert(error.message || 'Failed to save salary package');
@@ -1130,7 +1126,6 @@ ${emailPreview.senderName}`;
                                         window.open(mailtoLink, '_blank');
 
                                         await loadCandidates();
-                                        alert('Request email opened successfully!');
                                       } catch (error) {
                                         alert('Failed to generate request');
                                       } finally {
@@ -1180,7 +1175,6 @@ ${emailPreview.senderName}`;
                                       try {
                                         await updateCurrentStep(candidate.candidate_id, 'Contract Issued');
                                         await loadCandidates();
-                                        alert('Contract marked as issued successfully!');
                                       } catch (error) {
                                         alert('Failed to update status');
                                       } finally {

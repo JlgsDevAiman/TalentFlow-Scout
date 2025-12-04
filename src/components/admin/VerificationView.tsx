@@ -43,7 +43,6 @@ export default function VerificationView() {
     try {
       await updateVerificationDecision(candidateId, decision, comment);
       await loadCandidates();
-      alert('Decision submitted successfully!');
       setCommentInputs({ ...commentInputs, [candidateId]: '' });
     } catch (error) {
       console.error('Error submitting decision:', error);
