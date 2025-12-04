@@ -45,17 +45,23 @@ export default function SalaryVerification() {
   const [data, setData] = useState<CandidateData | null>(null);
   const [error, setError] = useState('');
   const [candidateId, setCandidateId] = useState('');
+  const [token, setToken] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [comment, setComment] = useState('');
+  const [decision, setDecision] = useState<'Approved' | 'Rejected' | 'Request Change' | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const id = params.get('candidate_id');
-    const token = params.get('token');
+    const tokenParam = params.get('token');
 
     if (id) {
       setCandidateId(id);
       fetchVerificationData(id);
-    } else if (token) {
-      fetchVerificationDataByToken(token);
+    } else if (tokenParam) {
+      setToken(tokenParam);
+      fetchVerificationDataByToken(tokenParam);
     } else {
       setError('No candidate ID or token provided in URL');
       setLoading(false);
@@ -124,12 +130,79 @@ export default function SalaryVerification() {
     return 'bg-red-100 text-red-800 border-red-300';
   };
 
+  const handleSubmit = async (selectedDecision: 'Approved' | 'Rejected' | 'Request Change') => {
+    if (!token) {
+      setError('No verification token available');
+      return;
+    }
+
+    setDecision(selectedDecision);
+    setSubmitting(true);
+    setError('');
+
+    try {
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/handle-verification-response`;
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          token,
+          decision: selectedDecision,
+          comment: comment.trim()
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to submit decision');
+      }
+
+      setSubmitted(true);
+    } catch (err: any) {
+      console.error('Error submitting decision:', err);
+      setError(err.message || 'Failed to submit decision. Please try again.');
+      setSubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto mb-4"></div>
           <p className="text-slate-600">Loading verification data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (submitted) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
+          <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-slate-800 mb-2">Decision Submitted</h1>
+          <p className="text-slate-600 mb-4">
+            Your decision has been recorded successfully. The recruiter has been notified.
+          </p>
+          <div className={`inline-block px-4 py-2 rounded-lg font-semibold ${
+            decision === 'Approved' ? 'bg-green-100 text-green-700' :
+            decision === 'Rejected' ? 'bg-red-100 text-red-700' :
+            'bg-amber-100 text-amber-700'
+          }`}>
+            {decision}
+          </div>
+          {comment && (
+            <div className="mt-4 text-left bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <p className="text-sm font-semibold text-slate-700 mb-1">Your Comment:</p>
+              <p className="text-sm text-slate-600">{comment}</p>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -497,6 +570,72 @@ export default function SalaryVerification() {
             Prepared by: <span className="font-medium text-slate-700">{meta.recruiter_name}</span>
           </div>
         </div>
+
+        {/* Decision Section - Only show if token exists (public verification link) */}
+        {token && (
+          <div className="bg-white rounded-lg shadow-lg border-2 border-cyan-200 p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <FileCheck className="w-6 h-6 text-cyan-600" />
+              <h2 className="text-2xl font-bold text-slate-800">Your Decision</h2>
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+                <p className="text-red-800 text-sm">{error}</p>
+              </div>
+            )}
+
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Add Comment (Optional)
+              </label>
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Add any comments or feedback..."
+                rows={4}
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm"
+                disabled={submitting}
+              />
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-sm font-semibold text-slate-700 mb-3">Select Your Decision:</p>
+
+              <button
+                onClick={() => handleSubmit('Approved')}
+                disabled={submitting}
+                className="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <CheckCircle className="w-6 h-6" />
+                {submitting && decision === 'Approved' ? 'Submitting...' : 'Approve Salary Package'}
+              </button>
+
+              <button
+                onClick={() => handleSubmit('Request Change')}
+                disabled={submitting}
+                className="w-full px-6 py-4 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-semibold flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <AlertCircle className="w-6 h-6" />
+                {submitting && decision === 'Request Change' ? 'Submitting...' : 'Request Change'}
+              </button>
+
+              <button
+                onClick={() => handleSubmit('Rejected')}
+                disabled={submitting}
+                className="w-full px-6 py-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <XCircle className="w-6 h-6" />
+                {submitting && decision === 'Rejected' ? 'Submitting...' : 'Reject Salary Package'}
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500 mt-6 text-center">
+              This link is valid for 7 days and can only be used once.
+            </p>
+          </div>
+        )}
 
       </div>
     </div>
