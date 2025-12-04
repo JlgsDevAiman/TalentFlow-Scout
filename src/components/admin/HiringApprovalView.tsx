@@ -132,57 +132,51 @@ export default function HiringApprovalView() {
       const baseUrl = getPublicBaseUrl();
       const verifyUrl = `${baseUrl}/verify?token=${token}&candidate=${encodeURIComponent(candidate.name)}&position=${encodeURIComponent(candidate.position)}`;
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('User not authenticated');
-      }
+      const subject = `Salary Package Verification Required - ${candidate.name} (${candidate.position})`;
 
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-verification-request`;
+      const allowancesText = candidate.salary_proposal?.allowances && candidate.salary_proposal.allowances.length > 0
+        ? '\n\nAllowances:\n' + candidate.salary_proposal.allowances.map((a: any) => `- ${a.name}: ${a.amount}`).join('\n')
+        : '';
 
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          candidateId: candidate.candidate_id,
-          candidateName: candidate.name,
-          position: candidate.position,
-          verifierEmail: verifierEmail,
-          salaryProposal: {
-            basicSalary: candidate.salary_proposal?.basic_salary || 'N/A',
-            totalSalary: candidate.salary_proposal?.total_salary || 'N/A',
-            allowances: candidate.salary_proposal?.allowances || []
-          },
-          verifyUrl: verifyUrl,
-          recruiter: candidate.recruiter,
-          recruiterEmail: candidate.recruiter_email,
-          assessmentStatus: candidate.assessment_status,
-          assessmentScore: candidate.assessment_score,
-          backgroundCheckStatus: candidate.background_check_status
-        }),
-      });
+      const body = `Dear Verifier,
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to send verification request');
-      }
+A salary package requires your verification and approval.
 
-      const result = await response.json();
+Candidate Information:
+- Name: ${candidate.name}
+- Position: ${candidate.position}
+- Recruiter: ${candidate.recruiter} (${candidate.recruiter_email})
 
-      if (result.success && result.emailPreview) {
-        await navigator.clipboard.writeText(result.emailPreview.htmlBody);
-        await loadCandidates();
-        showNotification('Email template copied to clipboard', 'success');
-      } else {
-        throw new Error('Invalid response from server');
-      }
+Assessment & Background Check:
+- Assessment Status: ${candidate.assessment_status}${candidate.assessment_score ? `\n- Assessment Score: ${candidate.assessment_score}` : ''}
+- Background Check: ${candidate.background_check_status}
+
+Proposed Salary Package:
+- Basic Salary: ${candidate.salary_proposal?.basic_salary || 'N/A'}${allowancesText}
+- Total Salary: ${candidate.salary_proposal?.total_salary || 'N/A'}
+
+VERIFICATION LINK:
+${verifyUrl}
+
+Click the link above and select your decision:
+✓ Approve  |  ⟳ Request Change  |  ✗ Reject
+
+Note: This link is valid for 7 days and can only be used once. Click the link and select your decision on the verification page.
+
+If you have any questions, please contact the recruitment team.
+
+Best regards,
+Talent Acquisition Team`;
+
+      const mailtoLink = `mailto:${verifierEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+      window.open(mailtoLink, '_blank');
+      await loadCandidates();
+      setVerificationEmailPreview(null);
     } catch (error: any) {
       showNotification(error.message || 'Failed to send verification request', 'error');
     } finally {
       setProcessingAction(null);
-      setVerificationEmailPreview(null);
     }
   };
 
@@ -204,54 +198,49 @@ export default function HiringApprovalView() {
       const baseUrl = getPublicBaseUrl();
       const verifyUrl = `${baseUrl}/verify?token=${token}&candidate=${encodeURIComponent(candidate.name)}&position=${encodeURIComponent(candidate.position)}`;
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('User not authenticated');
-      }
+      const subject = `Salary Package Verification Required - ${candidate.name} (${candidate.position})`;
 
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-verification-request`;
+      const allowancesText = candidate.salary_proposal?.allowances && candidate.salary_proposal.allowances.length > 0
+        ? '\n\nAllowances:\n' + candidate.salary_proposal.allowances.map((a: any) => `- ${a.name}: ${a.amount}`).join('\n')
+        : '';
 
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          candidateId: candidate.candidate_id,
-          candidateName: candidate.name,
-          position: candidate.position,
-          verifierEmail: newEmail,
-          salaryProposal: {
-            basicSalary: candidate.salary_proposal?.basic_salary || 'N/A',
-            totalSalary: candidate.salary_proposal?.total_salary || 'N/A',
-            allowances: candidate.salary_proposal?.allowances || []
-          },
-          verifyUrl: verifyUrl,
-          recruiter: candidate.recruiter,
-          recruiterEmail: candidate.recruiter_email,
-          assessmentStatus: candidate.assessment_status,
-          assessmentScore: candidate.assessment_score,
-          backgroundCheckStatus: candidate.background_check_status
-        }),
-      });
+      const body = `Dear Verifier,
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to resend verification request');
-      }
+A salary package requires your verification and approval.
 
-      const result = await response.json();
+Candidate Information:
+- Name: ${candidate.name}
+- Position: ${candidate.position}
+- Recruiter: ${candidate.recruiter} (${candidate.recruiter_email})
 
-      if (result.success && result.emailPreview) {
-        await navigator.clipboard.writeText(result.emailPreview.htmlBody);
-        await loadCandidates();
-        showNotification('Verification link resent successfully', 'success');
-        setShowResendForm(null);
-        setResendVerificationEmail({});
-      } else {
-        throw new Error('Invalid response from server');
-      }
+Assessment & Background Check:
+- Assessment Status: ${candidate.assessment_status}${candidate.assessment_score ? `\n- Assessment Score: ${candidate.assessment_score}` : ''}
+- Background Check: ${candidate.background_check_status}
+
+Proposed Salary Package:
+- Basic Salary: ${candidate.salary_proposal?.basic_salary || 'N/A'}${allowancesText}
+- Total Salary: ${candidate.salary_proposal?.total_salary || 'N/A'}
+
+VERIFICATION LINK:
+${verifyUrl}
+
+Click the link above and select your decision:
+✓ Approve  |  ⟳ Request Change  |  ✗ Reject
+
+Note: This link is valid for 7 days and can only be used once. Click the link and select your decision on the verification page.
+
+If you have any questions, please contact the recruitment team.
+
+Best regards,
+Talent Acquisition Team`;
+
+      const mailtoLink = `mailto:${newEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+      window.open(mailtoLink, '_blank');
+      await loadCandidates();
+      showNotification('Email draft opened successfully', 'success');
+      setShowResendForm(null);
+      setResendVerificationEmail({});
     } catch (error: any) {
       showNotification(error.message || 'Failed to resend verification link', 'error');
     } finally {
