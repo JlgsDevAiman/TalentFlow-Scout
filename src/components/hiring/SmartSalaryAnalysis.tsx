@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { DollarSign, TrendingUp, AlertTriangle, CheckCircle, Sparkles, RefreshCw } from 'lucide-react';
+import { TrendingUp, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
 
 interface Allowance {
   name: string;
@@ -56,8 +56,6 @@ export default function SmartSalaryAnalysis({
     employerContributionPct: '15'
   });
 
-  const [aiInsight, setAiInsight] = useState('');
-  const [generatingInsight, setGeneratingInsight] = useState(false);
 
   useEffect(() => {
     if (formData.grade && SALARY_BANDS[formData.grade]) {
@@ -138,42 +136,6 @@ export default function SmartSalaryAnalysis({
     return flags;
   };
 
-  const generateAIInsight = async () => {
-    setGeneratingInsight(true);
-    try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-salary-insight`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify({
-          jobTitle: formData.jobTitle,
-          yearsOfExperience: formData.yearsOfExperience,
-          basicSalary: basicSalaryNum,
-          totalSalary: totalSalary,
-          lastDrawnSalary: lastDrawnSalary,
-          expectedSalary: expectedSalary,
-          bandMin: bandMinRM,
-          bandMid: bandMidRM,
-          bandMax: bandMaxRM,
-          totalCTC: totalCTC
-        })
-      });
-
-      const data = await response.json();
-      if (data.insight) {
-        setAiInsight(data.insight);
-      } else {
-        setAiInsight('Unable to generate insight at this time.');
-      }
-    } catch (error) {
-      console.error('Error generating AI insight:', error);
-      setAiInsight('Failed to generate insight. Please try again.');
-    } finally {
-      setGeneratingInsight(false);
-    }
-  };
 
   const addAllowance = () => {
     setFormData({
@@ -202,8 +164,7 @@ export default function SmartSalaryAnalysis({
       allowancesTotal,
       allowanceRatio,
       employerContributionRM,
-      totalCTC,
-      aiInsight
+      totalCTC
     });
   };
 
@@ -536,51 +497,6 @@ export default function SmartSalaryAnalysis({
             </ul>
           </div>
         )}
-
-        {/* AI Salary Insight */}
-        <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="w-5 h-5 text-purple-600" />
-            <h4 className="font-semibold text-slate-800">AI Salary Insight</h4>
-          </div>
-
-          {!aiInsight ? (
-            <button
-              onClick={generateAIInsight}
-              disabled={generatingInsight || !formData.jobTitle || !formData.yearsOfExperience || basicSalaryNum === 0}
-              className="w-full px-4 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {generatingInsight ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  Generate Salary Insight (AI)
-                </>
-              )}
-            </button>
-          ) : (
-            <div className="space-y-3">
-              <div className="bg-white rounded-lg p-4 text-sm text-slate-700 leading-relaxed border border-purple-200">
-                {aiInsight}
-              </div>
-              <button
-                onClick={() => {
-                  setAiInsight('');
-                  generateAIInsight();
-                }}
-                disabled={generatingInsight}
-                className="text-sm text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1"
-              >
-                <RefreshCw className="w-3 h-3" />
-                Regenerate Insight
-              </button>
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Action Buttons */}
