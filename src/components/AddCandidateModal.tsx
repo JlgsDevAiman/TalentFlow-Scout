@@ -80,7 +80,25 @@ export default function AddCandidateModal({ isOpen, onClose, onSubmit }: AddCand
       setUploadedFile(file);
       setError('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to parse resume');
+      console.error('Resume parsing error:', err);
+      let errorMessage = 'Failed to parse resume';
+
+      if (err instanceof Error) {
+        errorMessage = err.message;
+
+        // Add more helpful context for common errors
+        if (err.message.includes('Failed to fetch')) {
+          errorMessage = 'Network error: Unable to connect to OpenAI API. Please check your internet connection and API key.';
+        } else if (err.message.includes('API key')) {
+          errorMessage = 'OpenAI API key is invalid or not configured. Please check your .env file.';
+        } else if (err.message.includes('401')) {
+          errorMessage = 'OpenAI API key is invalid or expired. Please update your API key in the .env file.';
+        } else if (err.message.includes('429')) {
+          errorMessage = 'OpenAI API rate limit exceeded. Please try again later.';
+        }
+      }
+
+      setError(errorMessage);
       setUploadedFileName('');
       setUploadedFile(null);
     } finally {

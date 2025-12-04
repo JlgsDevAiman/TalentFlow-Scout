@@ -458,33 +458,52 @@ If any field cannot be found, use reasonable defaults:
 - years_experience: 0
 - notes: Include whatever information is available`;
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an HR assistant that extracts structured data from resumes. Always respond with valid JSON.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      response_format: { type: 'json_object' },
-      temperature: 0.3,
-      max_tokens: 500
-    })
-  });
+  let response;
+  try {
+    response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an HR assistant that extracts structured data from resumes. Always respond with valid JSON.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.3,
+        max_tokens: 500
+      })
+    });
+  } catch (networkError) {
+    throw new Error('Network error: Unable to connect to OpenAI API. Please check your internet connection.');
+  }
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error?.message || 'Failed to parse resume');
+    let errorMessage = 'Failed to parse resume';
+
+    try {
+      const error = await response.json();
+      errorMessage = error.error?.message || `API Error: ${response.status} ${response.statusText}`;
+    } catch {
+      errorMessage = `API Error: ${response.status} ${response.statusText}`;
+    }
+
+    if (response.status === 401) {
+      throw new Error('401: Invalid OpenAI API key. Please check your .env file.');
+    } else if (response.status === 429) {
+      throw new Error('429: OpenAI API rate limit exceeded. Please try again later.');
+    }
+
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();
