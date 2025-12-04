@@ -421,70 +421,29 @@ Format your response as JSON with this structure:
 }
 
 export async function parseResume(fileContent: string): Promise<ParsedResumeData> {
-  const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-  if (!apiKey || apiKey === 'your_openai_api_key_here') {
-    throw new Error('OpenAI API key not configured. Please add your API key to the .env file.');
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Supabase configuration not found. Please check your .env file.');
   }
 
-  const prompt = `You are an HR assistant that extracts information from resumes/CVs.
-
-Parse the following resume and extract:
-1. Full name
-2. Email address
-3. Phone number
-4. The most recent or primary job position/role (for "position_applied")
-5. Total years of professional experience (estimate if not explicitly stated)
-6. A brief summary of skills, education, and experience (for notes field)
-
-Resume content:
-${fileContent}
-
-Format your response as JSON with this exact structure:
-{
-  "full_name": "<extracted name>",
-  "email": "<extracted email>",
-  "phone": "<extracted phone>",
-  "position_applied": "<most relevant position/role>",
-  "years_experience": <number>,
-  "notes": "<brief summary of skills, education, and experience>"
-}
-
-If any field cannot be found, use reasonable defaults:
-- full_name: "Unknown"
-- email: "not_provided@example.com"
-- phone: "Not provided"
-- position_applied: "General Application"
-- years_experience: 0
-- notes: Include whatever information is available`;
+  const functionUrl = `${supabaseUrl}/functions/v1/parse-resume`;
 
   let response;
   try {
-    response = await fetch('https://api.openai.com/v1/chat/completions', {
+    response = await fetch(functionUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Bearer ${supabaseAnonKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an HR assistant that extracts structured data from resumes. Always respond with valid JSON.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        response_format: { type: 'json_object' },
-        temperature: 0.3,
-        max_tokens: 500
+        fileContent: fileContent
       })
     });
   } catch (networkError) {
-    throw new Error('Network error: Unable to connect to OpenAI API. Please check your internet connection.');
+    throw new Error('Network error: Unable to connect to resume parsing service. Please check your internet connection.');
   }
 
   if (!response.ok) {
@@ -492,31 +451,15 @@ If any field cannot be found, use reasonable defaults:
 
     try {
       const error = await response.json();
-      errorMessage = error.error?.message || `API Error: ${response.status} ${response.statusText}`;
+      errorMessage = error.error || `Server Error: ${response.status} ${response.statusText}`;
     } catch {
-      errorMessage = `API Error: ${response.status} ${response.statusText}`;
-    }
-
-    if (response.status === 401) {
-      throw new Error('401: Invalid OpenAI API key. Please check your .env file.');
-    } else if (response.status === 429) {
-      throw new Error('429: OpenAI API rate limit exceeded. Please try again later.');
+      errorMessage = `Server Error: ${response.status} ${response.statusText}`;
     }
 
     throw new Error(errorMessage);
   }
 
-  const data = await response.json();
-  let content = data.choices[0].message.content;
-
-  content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-
-  let result;
-  try {
-    result = JSON.parse(content);
-  } catch (parseError) {
-    throw new Error('Failed to parse AI response. Please try uploading a different resume format or check the file content.');
-  }
+  const result: ParsedResumeData = await response.json();
 
   return {
     full_name: result.full_name || 'Unknown',
