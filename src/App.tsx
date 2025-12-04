@@ -8,17 +8,17 @@ import { Loader2 } from 'lucide-react';
 function App() {
   const currentPath = window.location.pathname;
 
-  const publicRoutes = ['/verify', '/approve', '/salary-verification'];
-  const isPublicRoute = publicRoutes.includes(currentPath);
+  console.log('[App Router] Current path:', currentPath);
+  console.log('[App Router] Search params:', window.location.search);
 
-  if (isPublicRoute) {
-    if (currentPath === '/verify' || currentPath === '/salary-verification') {
-      return <SalaryVerification />;
-    }
+  if (currentPath === '/verify' || currentPath === '/salary-verification') {
+    console.log('[App Router] Rendering SalaryVerification page');
+    return <SalaryVerification />;
+  }
 
-    if (currentPath === '/approve') {
-      return <ApprovalResponse />;
-    }
+  if (currentPath === '/approve') {
+    console.log('[App Router] Rendering ApprovalResponse page');
+    return <ApprovalResponse />;
   }
 
   const { user, loading } = useAuth();
