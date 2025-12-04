@@ -124,125 +124,54 @@ export default function HiringApprovalView() {
       const baseUrl = getPublicBaseUrl();
       const verifyUrl = `${baseUrl}/verify?token=${token}&candidate=${encodeURIComponent(candidate.name)}&position=${encodeURIComponent(candidate.position)}`;
 
-      const basicSalary = candidate.salary_proposal?.basic_salary || 'N/A';
-      const totalSalary = candidate.salary_proposal?.total_salary || 'N/A';
-      const allowances = candidate.salary_proposal?.allowances || [];
-
-      let allowancesText = '';
-      if (allowances.length > 0) {
-        allowancesText = '\n\nAllowances:\n' + allowances.map((a: any) => `- ${a.name}: ${a.amount}`).join('\n');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('User not authenticated');
       }
 
-      const subject = `Salary Package Verification Required - ${candidate.name} (${candidate.position})`;
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-verification-request`;
 
-      // Create HTML email body with buttons
-      const htmlBody = `
-<!DOCTYPE html>
-<html>
-<head>
-  <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0; }
-    .content { background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; }
-    .info-section { background: white; padding: 15px; margin: 15px 0; border-radius: 6px; border-left: 4px solid #0891b2; }
-    .button-container { text-align: center; margin: 30px 0; padding: 20px; background: white; border-radius: 8px; }
-    .button { display: inline-block; padding: 14px 32px; margin: 8px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 15px; transition: all 0.3s; }
-    .btn-approve { background: #10b981; color: white; }
-    .btn-approve:hover { background: #059669; }
-    .btn-change { background: #f59e0b; color: white; }
-    .btn-change:hover { background: #d97706; }
-    .btn-reject { background: #ef4444; color: white; }
-    .btn-reject:hover { background: #dc2626; }
-    .footer { text-align: center; padding: 20px; color: #64748b; font-size: 14px; }
-    .note { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin: 15px 0; border-radius: 4px; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h2 style="margin: 0;">Salary Package Verification Required</h2>
-    </div>
-    <div class="content">
-      <p>Dear Verifier,</p>
-      <p>A salary package requires your verification and approval.</p>
-
-      <div class="info-section">
-        <h3 style="margin-top: 0; color: #0891b2;">Candidate Information</h3>
-        <p><strong>Name:</strong> ${candidate.name}</p>
-        <p><strong>Position:</strong> ${candidate.position}</p>
-        <p><strong>Recruiter:</strong> ${candidate.recruiter} (${candidate.recruiter_email})</p>
-      </div>
-
-      <div class="info-section">
-        <h3 style="margin-top: 0; color: #0891b2;">Assessment & Background Check</h3>
-        <p><strong>Assessment Status:</strong> ${candidate.assessment_status}</p>
-        ${candidate.assessment_score ? `<p><strong>Assessment Score:</strong> ${candidate.assessment_score}</p>` : ''}
-        <p><strong>Background Check:</strong> ${candidate.background_check_status}</p>
-      </div>
-
-      <div class="info-section">
-        <h3 style="margin-top: 0; color: #0891b2;">Proposed Salary Package</h3>
-        <p><strong>Basic Salary:</strong> ${basicSalary}</p>
-        ${allowances.length > 0 ? `<p><strong>Allowances:</strong></p><ul>${allowances.map((a: any) => `<li>${a.name}: ${a.amount}</li>`).join('')}</ul>` : ''}
-        <p><strong>Total Salary:</strong> ${totalSalary}</p>
-      </div>
-
-      <div class="button-container">
-        <h3 style="color: #334155; margin-top: 0;">Click a button to submit your decision:</h3>
-        <a href="${verifyUrl}" class="button btn-approve">✓ Approve</a>
-        <a href="${verifyUrl}" class="button btn-change">⟳ Request Change</a>
-        <a href="${verifyUrl}" class="button btn-reject">✗ Reject</a>
-      </div>
-
-      <div class="note">
-        <p style="margin: 0;"><strong>Note:</strong> This link is valid for 7 days. Click any button above and select your decision on the verification page.</p>
-      </div>
-
-      <p>If you have any questions, please contact the recruitment team.</p>
-    </div>
-    <div class="footer">
-      <p>Best regards,<br><strong>Talent Acquisition Team</strong></p>
-    </div>
-  </div>
-</body>
-</html>`;
-
-      // For mailto, create a simpler text version with clear instructions
-      const textBody = `Dear Verifier,
-
-A salary package requires your verification and approval.
-
-CANDIDATE: ${candidate.name} - ${candidate.position}
-RECRUITER: ${candidate.recruiter}
-
-PROPOSED SALARY:
-- Basic: ${basicSalary}
-- Total: ${totalSalary}
-
-CLICK THIS LINK TO REVIEW AND DECIDE:
-${verifyUrl}
-
-You will see 3 buttons on the verification page:
-✓ Approve  |  ⟳ Request Change  |  ✗ Reject
-
-Link valid for 7 days.
-
-Best regards,
-Talent Acquisition Team`;
-
-      const mailtoLink = `mailto:${verifierEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(textBody)}`;
-
-      // Copy HTML version to clipboard for manual sending via email client
-      navigator.clipboard.writeText(htmlBody).then(() => {
-        console.log('HTML email template copied to clipboard');
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          candidateId: candidate.candidate_id,
+          candidateName: candidate.name,
+          position: candidate.position,
+          verifierEmail: verifierEmail,
+          salaryProposal: {
+            basicSalary: candidate.salary_proposal?.basic_salary || 'N/A',
+            totalSalary: candidate.salary_proposal?.total_salary || 'N/A',
+            allowances: candidate.salary_proposal?.allowances || []
+          },
+          verifyUrl: verifyUrl,
+          recruiter: candidate.recruiter,
+          recruiterEmail: candidate.recruiter_email,
+          assessmentStatus: candidate.assessment_status,
+          assessmentScore: candidate.assessment_score,
+          backgroundCheckStatus: candidate.background_check_status
+        }),
       });
 
-      window.open(mailtoLink, '_blank');
-      await loadCandidates();
-      alert('Verification request email opened!\n\nNote: HTML email template with styled buttons has been copied to your clipboard. You can paste it into your email client for a better-looking email with clickable buttons.');
-    } catch (error) {
-      alert('Failed to send verification request');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to send verification request');
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.emailPreview) {
+        await navigator.clipboard.writeText(result.emailPreview.htmlBody);
+        await loadCandidates();
+        alert(`Verification request processed!\n\nTo: ${result.emailPreview.to}\nSubject: ${result.emailPreview.subject}\n\nHTML email template has been copied to your clipboard. Paste it into your email client to send.`);
+      } else {
+        throw new Error('Invalid response from server');
+      }
+    } catch (error: any) {
+      alert(`Failed to send verification request: ${error.message}`);
     } finally {
       setProcessingAction(null);
       setVerificationEmailPreview(null);
