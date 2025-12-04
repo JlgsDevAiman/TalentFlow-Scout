@@ -7,17 +7,22 @@ import { Loader2 } from 'lucide-react';
 
 function App() {
   const currentPath = window.location.pathname;
+  const searchParams = new URLSearchParams(window.location.search);
+  const hasToken = searchParams.has('token');
+  const hasApprovalToken = searchParams.has('approval_token');
 
   console.log('[App Router] Current path:', currentPath);
   console.log('[App Router] Search params:', window.location.search);
+  console.log('[App Router] Has token:', hasToken);
+  console.log('[App Router] Has approval_token:', hasApprovalToken);
 
-  if (currentPath === '/verify' || currentPath === '/salary-verification') {
-    console.log('[App Router] Rendering SalaryVerification page');
+  if (hasToken || currentPath === '/verify' || currentPath === '/salary-verification') {
+    console.log('[App Router] Rendering SalaryVerification page (public access)');
     return <SalaryVerification />;
   }
 
-  if (currentPath === '/approve') {
-    console.log('[App Router] Rendering ApprovalResponse page');
+  if (hasApprovalToken || currentPath === '/approve') {
+    console.log('[App Router] Rendering ApprovalResponse page (public access)');
     return <ApprovalResponse />;
   }
 
