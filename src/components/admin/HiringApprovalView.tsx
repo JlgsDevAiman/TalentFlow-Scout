@@ -1,11 +1,12 @@
 import { useState, useEffect, Fragment } from 'react';
-import { RefreshCw, Search, Users, CheckCircle, Clock, AlertCircle, Mail, FileCheck, DollarSign, Send, ChevronDown, ChevronUp, X, Eye, Upload, Download, Plus, Edit2, Trash2 } from 'lucide-react';
+import { RefreshCw, Search, Users, CheckCircle, Clock, AlertCircle, Mail, FileCheck, DollarSign, Send, ChevronDown, ChevronUp, X, Eye, Upload, Download, Plus, Edit2, Trash2, RotateCcw } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { sendAssessmentNotification, uploadAssessmentReport, deleteAssessmentReport, updateAssessmentScore, updateAssessmentStatus, updateBackgroundCheckStatus, updateCurrentStep, uploadBackgroundCheckDocument, deleteBackgroundCheckDocument, saveSalaryProposal, sendVerificationRequest, updateVerificationDecision, sendApprovalRequest, HiringCandidate as ImportedHiringCandidate } from '../../services/hiringFlowService';
 import SmartSalaryAnalysis from '../hiring/SmartSalaryAnalysis';
 import { getPublicBaseUrl } from '../../utils/urlHelper';
 import EditCandidateModal from '../EditCandidateModal';
 import { updateCandidate, deleteCandidate } from '../../services/candidateService';
+import Notification from '../Notification';
 
 type HiringCandidate = ImportedHiringCandidate;
 
@@ -46,6 +47,13 @@ export default function HiringApprovalView() {
   const [savingSalary, setSavingSalary] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedCandidateForEdit, setSelectedCandidateForEdit] = useState<any | null>(null);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [resendVerificationEmail, setResendVerificationEmail] = useState<{ [key: string]: string }>({});
+  const [showResendForm, setShowResendForm] = useState<string | null>(null);
+
+  const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setNotification({ message, type });
+  };
 
   useEffect(() => {
     loadCandidates();
@@ -72,7 +80,7 @@ export default function HiringApprovalView() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || !user.email) {
-        alert('User not authenticated');
+        showNotification('Authentication required', 'error');
         return;
       }
 
@@ -92,7 +100,7 @@ export default function HiringApprovalView() {
       });
     } catch (error) {
       console.error('Error preparing email preview:', error);
-      alert('Failed to prepare email preview');
+      showNotification('Failed to prepare email preview', 'error');
     }
   };
 
@@ -108,7 +116,7 @@ export default function HiringApprovalView() {
       });
     } catch (error) {
       console.error('Error preparing verification email preview:', error);
-      alert('Failed to prepare verification email preview');
+      showNotification('Failed to prepare verification email preview', 'error');
     }
   };
 
@@ -166,15 +174,88 @@ export default function HiringApprovalView() {
       if (result.success && result.emailPreview) {
         await navigator.clipboard.writeText(result.emailPreview.htmlBody);
         await loadCandidates();
-        alert(`Verification request processed!\n\nTo: ${result.emailPreview.to}\nSubject: ${result.emailPreview.subject}\n\nHTML email template has been copied to your clipboard. Paste it into your email client to send.`);
+        showNotification('Email template copied to clipboard', 'success');
       } else {
         throw new Error('Invalid response from server');
       }
     } catch (error: any) {
-      alert(`Failed to send verification request: ${error.message}`);
+      showNotification(error.message || 'Failed to send verification request', 'error');
     } finally {
       setProcessingAction(null);
       setVerificationEmailPreview(null);
+    }
+  };
+
+  const handleResendVerificationEmail = async (candidateId: string, newEmail: string) => {
+    if (!newEmail || !newEmail.includes('@')) {
+      showNotification('Please enter a valid email address', 'error');
+      return;
+    }
+
+    setProcessingAction(candidateId);
+    try {
+      const candidate = candidates.find(c => c.candidate_id === candidateId);
+      if (!candidate) {
+        throw new Error('Candidate not found');
+      }
+
+      const token = await sendVerificationRequest(candidate, newEmail);
+
+      const baseUrl = getPublicBaseUrl();
+      const verifyUrl = `${baseUrl}/verify?token=${token}&candidate=${encodeURIComponent(candidate.name)}&position=${encodeURIComponent(candidate.position)}`;
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('User not authenticated');
+      }
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-verification-request`;
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          candidateId: candidate.candidate_id,
+          candidateName: candidate.name,
+          position: candidate.position,
+          verifierEmail: newEmail,
+          salaryProposal: {
+            basicSalary: candidate.salary_proposal?.basic_salary || 'N/A',
+            totalSalary: candidate.salary_proposal?.total_salary || 'N/A',
+            allowances: candidate.salary_proposal?.allowances || []
+          },
+          verifyUrl: verifyUrl,
+          recruiter: candidate.recruiter,
+          recruiterEmail: candidate.recruiter_email,
+          assessmentStatus: candidate.assessment_status,
+          assessmentScore: candidate.assessment_score,
+          backgroundCheckStatus: candidate.background_check_status
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to resend verification request');
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.emailPreview) {
+        await navigator.clipboard.writeText(result.emailPreview.htmlBody);
+        await loadCandidates();
+        showNotification('Verification link resent successfully', 'success');
+        setShowResendForm(null);
+        setResendVerificationEmail({});
+      } else {
+        throw new Error('Invalid response from server');
+      }
+    } catch (error: any) {
+      showNotification(error.message || 'Failed to resend verification link', 'error');
+    } finally {
+      setProcessingAction(null);
     }
   };
 
@@ -234,7 +315,7 @@ ${emailPreview.senderName}`;
       }
     } catch (error) {
       console.error('Error loading candidate for edit:', error);
-      alert('Failed to load candidate data');
+      showNotification('Failed to load candidate data', 'error');
     }
   };
 
@@ -246,7 +327,7 @@ ${emailPreview.senderName}`;
       setSelectedCandidateForEdit(null);
     } catch (error) {
       console.error('Error updating candidate:', error);
-      alert('Failed to update candidate');
+      showNotification('Failed to update candidate', 'error');
     }
   };
 
@@ -256,9 +337,10 @@ ${emailPreview.senderName}`;
     try {
       await deleteCandidate(candidateId);
       await loadCandidates();
+      showNotification('Candidate deleted successfully', 'success');
     } catch (error) {
       console.error('Error deleting candidate:', error);
-      alert('Failed to delete candidate');
+      showNotification('Failed to delete candidate', 'error');
     }
   };
 
@@ -303,7 +385,7 @@ ${emailPreview.senderName}`;
       await loadCandidates();
     } catch (error) {
       console.error('Error uploading assessment report:', error);
-      alert('Failed to upload assessment report');
+      showNotification('Failed to upload assessment report', 'error');
     } finally {
       setUploadingAssessment(null);
     }
@@ -311,7 +393,7 @@ ${emailPreview.senderName}`;
 
   const handleSaveAssessmentScore = async (candidateId: string, score: string) => {
     if (!score.trim()) {
-      alert('Please enter a score');
+      showNotification('Please enter a score', 'error');
       return;
     }
     try {
@@ -319,7 +401,7 @@ ${emailPreview.senderName}`;
       await loadCandidates();
     } catch (error) {
       console.error('Error saving assessment score:', error);
-      alert('Failed to save assessment score');
+      showNotification('Failed to save assessment score', 'error');
     }
   };
 
@@ -330,7 +412,7 @@ ${emailPreview.senderName}`;
       await loadCandidates();
     } catch (error) {
       console.error('Error uploading document:', error);
-      alert('Failed to upload document');
+      showNotification('Failed to upload document', 'error');
     } finally {
       setUploadingDocument(null);
     }
@@ -345,7 +427,7 @@ ${emailPreview.senderName}`;
       await loadCandidates();
     } catch (error) {
       console.error('Error deleting assessment report:', error);
-      alert('Failed to delete assessment report');
+      showNotification('Failed to delete assessment report', 'error');
     }
   };
 
@@ -358,7 +440,7 @@ ${emailPreview.senderName}`;
       await loadCandidates();
     } catch (error) {
       console.error('Error deleting document:', error);
-      alert('Failed to delete document');
+      showNotification('Failed to delete document', 'error');
     }
   };
 
@@ -404,7 +486,7 @@ ${emailPreview.senderName}`;
     };
 
     if (!dataToSave.basicSalary) {
-      alert('Please fill in Basic Salary');
+      showNotification('Please fill in Basic Salary', 'error');
       return;
     }
 
@@ -436,7 +518,7 @@ ${emailPreview.senderName}`;
       setSalaryFormData({ basicSalary: '', allowances: [] });
     } catch (error: any) {
       console.error('Error saving salary package:', error);
-      alert(error.message || 'Failed to save salary package');
+      showNotification(error.message || 'Failed to save salary package', 'error');
     }
   };
 
@@ -671,7 +753,7 @@ ${emailPreview.senderName}`;
                                           const emailInput = document.getElementById(`email-${candidate.candidate_id}`) as HTMLInputElement;
                                           const email = emailInput?.value;
                                           if (!email) {
-                                            alert('Please enter candidate email');
+                                            showNotification('Please enter candidate email', 'error');
                                             return;
                                           }
                                           await handlePreviewEmail(candidate, email);
@@ -761,7 +843,7 @@ ${emailPreview.senderName}`;
                                             await updateAssessmentStatus(candidate.candidate_id, 'Completed');
                                             await loadCandidates();
                                           } catch (error) {
-                                            alert('Failed to update status');
+                                            showNotification('Failed to update status', 'error');
                                           } finally {
                                             setProcessingAction(null);
                                           }
@@ -840,7 +922,7 @@ ${emailPreview.senderName}`;
                                               await updateBackgroundCheckStatus(candidate.candidate_id, 'Completed');
                                               await loadCandidates();
                                             } catch (error) {
-                                              alert('Failed to update status');
+                                              showNotification('Failed to update status', 'error');
                                             } finally {
                                               setProcessingAction(null);
                                             }
@@ -860,7 +942,7 @@ ${emailPreview.senderName}`;
                                                 await updateBackgroundCheckStatus(candidate.candidate_id, 'Not Required');
                                                 await loadCandidates();
                                               } catch (error) {
-                                                alert('Failed to update status');
+                                                showNotification('Failed to update status', 'error');
                                               } finally {
                                                 setProcessingAction(null);
                                               }
@@ -966,7 +1048,7 @@ ${emailPreview.senderName}`;
                                         const verifierInput = document.getElementById(`verifier-${candidate.candidate_id}`) as HTMLInputElement;
                                         const verifierEmail = verifierInput?.value;
                                         if (!verifierEmail) {
-                                          alert('Please enter verifier email');
+                                          showNotification('Please enter verifier email', 'error');
                                           return;
                                         }
                                         await handlePreviewVerificationEmail(candidate, verifierEmail);
@@ -990,10 +1072,15 @@ ${emailPreview.senderName}`;
                                 </h4>
                                 <div className="space-y-3 text-sm">
                                   <div className="bg-amber-50 border border-amber-200 rounded p-3">
-                                    <p className="text-amber-800">
-                                      <span className="font-semibold">Verifier:</span> {candidate.verifier_email}
-                                    </p>
-                                    <p className="text-amber-700 mt-1">Awaiting verification decision...</p>
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <p className="text-xs text-amber-600 font-medium">Verifier</p>
+                                        <p className="text-sm text-amber-900 font-semibold">{candidate.verifier_email}</p>
+                                      </div>
+                                      <div className="px-3 py-1 bg-amber-200 text-amber-800 text-xs font-medium rounded-full">
+                                        Pending
+                                      </div>
+                                    </div>
                                   </div>
 
                                   {candidate.salary_proposal && (
@@ -1013,15 +1100,65 @@ ${emailPreview.senderName}`;
                                     </div>
                                   )}
 
+                                  {showResendForm === candidate.candidate_id ? (
+                                    <div className="bg-blue-50 border border-blue-200 rounded p-3 space-y-2">
+                                      <label className="text-sm font-medium text-slate-700">Resend Verification Link</label>
+                                      <input
+                                        type="email"
+                                        placeholder="Enter new verifier email"
+                                        value={resendVerificationEmail[candidate.candidate_id] || ''}
+                                        onChange={(e) => setResendVerificationEmail({
+                                          ...resendVerificationEmail,
+                                          [candidate.candidate_id]: e.target.value
+                                        })}
+                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                                      />
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={() => handleResendVerificationEmail(
+                                            candidate.candidate_id,
+                                            resendVerificationEmail[candidate.candidate_id] || ''
+                                          )}
+                                          disabled={processingAction === candidate.candidate_id}
+                                          className="flex-1 px-3 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                                        >
+                                          <Send className="w-4 h-4" />
+                                          Send
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            setShowResendForm(null);
+                                            setResendVerificationEmail({
+                                              ...resendVerificationEmail,
+                                              [candidate.candidate_id]: ''
+                                            });
+                                          }}
+                                          className="px-3 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors text-sm"
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={() => setShowResendForm(candidate.candidate_id)}
+                                      className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center justify-center gap-2"
+                                    >
+                                      <RotateCcw className="w-4 h-4" />
+                                      Resend Verification Link
+                                    </button>
+                                  )}
+
                                   <button
                                     onClick={async () => {
-                                      if (confirm('Mark verification as completed and proceed to Recommendation process?')) {
+                                      if (confirm('Complete verification process?')) {
                                         setProcessingAction(candidate.candidate_id);
                                         try {
                                           await updateCurrentStep(candidate.candidate_id, 'Ready for Recommendation – Hiring Manager 1');
                                           await loadCandidates();
+                                          showNotification('Verification completed', 'success');
                                         } catch (error) {
-                                          alert('Failed to update status');
+                                          showNotification('Failed to update status', 'error');
                                         } finally {
                                           setProcessingAction(null);
                                         }
@@ -1031,7 +1168,7 @@ ${emailPreview.senderName}`;
                                     className="w-full px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-50"
                                   >
                                     <CheckCircle className="w-4 h-4" />
-                                    Complete Verification & Proceed to Recommendation
+                                    Complete Verification
                                   </button>
                                 </div>
                               </div>
@@ -1081,7 +1218,7 @@ ${emailPreview.senderName}`;
 
                                     const mapping = stepMapping[candidate.current_step];
                                     if (!mapping || !mapping.email) {
-                                      alert('Email not configured for this step');
+                                      showNotification('Email not configured for this step', 'error');
                                       return;
                                     }
 
@@ -1100,7 +1237,7 @@ ${emailPreview.senderName}`;
 
                                         await loadCandidates();
                                       } catch (error) {
-                                        alert('Failed to generate request');
+                                        showNotification('Failed to generate request', 'error');
                                       } finally {
                                         setProcessingAction(null);
                                       }
@@ -1149,7 +1286,7 @@ ${emailPreview.senderName}`;
                                         await updateCurrentStep(candidate.candidate_id, 'Contract Issued');
                                         await loadCandidates();
                                       } catch (error) {
-                                        alert('Failed to update status');
+                                        showNotification('Failed to update status', 'error');
                                       } finally {
                                         setProcessingAction(null);
                                       }
@@ -1448,6 +1585,14 @@ ${emailPreview.senderName}`;
         }}
         onSubmit={handleUpdateCandidate}
       />
+
+      {notification && (
+        <Notification
+          message={notification.message}
+          type={notification.type}
+          onClose={() => setNotification(null)}
+        />
+      )}
 
     </div>
   );
