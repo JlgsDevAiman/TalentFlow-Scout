@@ -47,6 +47,8 @@ export default function SmartSalaryAnalysis({
     jobTitle: position || '',
     positionLevel: '',
     grade: '',
+    company: '',
+    contractPeriod: '',
     yearsOfExperience: '',
     lastDrawnSalary: '',
     expectedSalary: '',
@@ -237,6 +239,57 @@ export default function SmartSalaryAnalysis({
             <option value="NE2">NE2</option>
             <option value="NE1">NE1</option>
             <option value="NEG">NEG</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            Company <span className="text-red-500">*</span>
+          </label>
+          <select
+            value={formData.company}
+            onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm"
+          >
+            <option value="">Select Company</option>
+            <option value="JLG Integra Berhad">JLG Integra Berhad</option>
+            <option value="JLG Investment Holdings Sdn Bhd">JLG Investment Holdings Sdn Bhd</option>
+            <option value="Damansara Assets Sdn Bhd">Damansara Assets Sdn Bhd</option>
+            <option value="JLG Centrix Sdn Bhd">JLG Centrix Sdn Bhd</option>
+            <option value="JLG Duraclean Sdn Bhd">JLG Duraclean Sdn Bhd</option>
+            <option value="JLG Healthserv Sdn Bhd">JLG Healthserv Sdn Bhd</option>
+            <option value="JLG Metro Sdn Bhd">JLG Metro Sdn Bhd</option>
+            <option value="JLG Neo Eats Sdn Bhd">JLG Neo Eats Sdn Bhd</option>
+            <option value="JLG Property Management Sdn Bhd">JLG Property Management Sdn Bhd</option>
+            <option value="JLG Securitas Sdn Bhd">JLG Securitas Sdn Bhd</option>
+            <option value="JLG Zaquin Sdn Bhd">JLG Zaquin Sdn Bhd</option>
+            <option value="TMR LC Services Sdn Bhd">TMR LC Services Sdn Bhd</option>
+            <option value="Valtro Services Sdn Bhd">Valtro Services Sdn Bhd</option>
+            <option value="Johor Capital Group (JCG)">Johor Capital Group (JCG)</option>
+            <option value="JLG Infratech Sdn Bhd">JLG Infratech Sdn Bhd</option>
+            <option value="Coaction Events Sdn Bhd">Coaction Events Sdn Bhd</option>
+            <option value="JLG Corporate Edge Sdn Bhd">JLG Corporate Edge Sdn Bhd</option>
+            <option value="JLG Services Sdn Bhd">JLG Services Sdn Bhd</option>
+            <option value="JLG Buildworks Sdn Bhd">JLG Buildworks Sdn Bhd</option>
+            <option value="JLG Projects Sdn Bhd">JLG Projects Sdn Bhd</option>
+            <option value="JLG REIT Managers Sdn Bhd">JLG REIT Managers Sdn Bhd</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            Contract Period <span className="text-red-500">*</span>
+          </label>
+          <select
+            value={formData.contractPeriod}
+            onChange={(e) => setFormData({ ...formData, contractPeriod: e.target.value })}
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm"
+          >
+            <option value="">Select Contract Period</option>
+            <option value="3 months">3 months</option>
+            <option value="6 months">6 months</option>
+            <option value="1 year">1 year</option>
+            <option value="2 years">2 years</option>
           </select>
         </div>
 

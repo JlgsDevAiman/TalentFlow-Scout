@@ -12,6 +12,8 @@ interface CandidateData {
     current_salary_total: number;
   };
   salary_proposal: {
+    company?: string;
+    contractPeriod?: string;
     basic_salary: number;
     allowances_total: number;
     total_salary: number;
@@ -231,7 +233,7 @@ export default function SalaryVerification() {
       {/* Header */}
       <div className="bg-gradient-to-r from-cyan-600 to-cyan-700 text-white py-8 px-4 shadow-lg">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold mb-2">Salary Package Verification</h1>
+          <h1 className="text-3xl font-bold mb-2">Package Proposal Verification</h1>
           <p className="text-cyan-100 text-lg">{candidate.name} – {candidate.position}</p>
         </div>
       </div>
@@ -296,6 +298,18 @@ export default function SalaryVerification() {
                 <p className="text-sm text-slate-600 mb-1">Position Applied</p>
                 <p className="font-semibold text-slate-800">{candidate.position}</p>
               </div>
+              {salary_proposal.company && (
+                <div>
+                  <p className="text-sm text-slate-600 mb-1">Company</p>
+                  <p className="font-semibold text-slate-800">{salary_proposal.company}</p>
+                </div>
+              )}
+              {salary_proposal.contractPeriod && (
+                <div>
+                  <p className="text-sm text-slate-600 mb-1">Contract Period</p>
+                  <p className="font-semibold text-slate-800">{salary_proposal.contractPeriod}</p>
+                </div>
+              )}
               <div>
                 <p className="text-sm text-slate-600 mb-1">Current Employer</p>
                 <p className="font-semibold text-slate-800">{candidate.current_employer || 'N/A'}</p>
@@ -609,7 +623,7 @@ export default function SalaryVerification() {
                 className="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <CheckCircle className="w-6 h-6" />
-                {submitting && decision === 'Approved' ? 'Submitting...' : 'Approve Salary Package'}
+                {submitting && decision === 'Approved' ? 'Submitting...' : 'Approve Package Proposal'}
               </button>
 
               <button
@@ -627,7 +641,7 @@ export default function SalaryVerification() {
                 className="w-full px-6 py-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <XCircle className="w-6 h-6" />
-                {submitting && decision === 'Rejected' ? 'Submitting...' : 'Reject Salary Package'}
+                {submitting && decision === 'Rejected' ? 'Submitting...' : 'Reject Package Proposal'}
               </button>
             </div>
 

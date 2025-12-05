@@ -146,15 +146,18 @@ export default function HiringApprovalView() {
       const baseUrl = getPublicBaseUrl();
       const verifyUrl = `${baseUrl}/verify?token=${token}&candidate=${encodeURIComponent(candidate.name)}&position=${encodeURIComponent(candidate.position)}`;
 
-      const subject = `Salary Package Verification Required - ${candidate.name} (${candidate.position})`;
+      const subject = `Package Proposal Verification Required - ${candidate.name} (${candidate.position})`;
 
       const allowancesText = candidate.salary_proposal?.allowances && candidate.salary_proposal.allowances.length > 0
         ? '\n\nAllowances:\n' + candidate.salary_proposal.allowances.map((a: any) => `- ${a.name}: ${a.amount}`).join('\n')
         : '';
 
+      const companyText = candidate.salary_proposal?.company ? `\n- Company: ${candidate.salary_proposal.company}` : '';
+      const contractText = candidate.salary_proposal?.contractPeriod ? `\n- Contract Period: ${candidate.salary_proposal.contractPeriod}` : '';
+
       const body = `Dear Verifier,
 
-A salary package requires your verification and approval.
+A package proposal requires your verification and approval.
 
 Candidate Information:
 - Name: ${candidate.name}
@@ -165,7 +168,7 @@ Assessment & Background Check:
 - Assessment Status: ${candidate.assessment_status}${candidate.assessment_score ? `\n- Assessment Score: ${candidate.assessment_score}` : ''}
 - Background Check: ${candidate.background_check_status}
 
-Proposed Salary Package:
+Proposed Package Details:${companyText}${contractText}
 - Basic Salary: ${candidate.salary_proposal?.basic_salary || 'N/A'}${allowancesText}
 - Total Salary: ${candidate.salary_proposal?.total_salary || 'N/A'}
 
@@ -237,7 +240,7 @@ Assessment & Background Check:
 - Assessment Status: ${approvalEmailPreview.candidate.assessment_status}${approvalEmailPreview.candidate.assessment_score ? `\n- Assessment Score: ${approvalEmailPreview.candidate.assessment_score}` : ''}
 - Background Check: ${approvalEmailPreview.candidate.background_check_status}
 
-${approvalEmailPreview.candidate.salary_proposal ? `Proposed Salary Package:
+${approvalEmailPreview.candidate.salary_proposal ? `Proposed Package Details:
 - Basic Salary: ${approvalEmailPreview.candidate.salary_proposal.basic_salary}${approvalEmailPreview.candidate.salary_proposal.allowances && approvalEmailPreview.candidate.salary_proposal.allowances.length > 0 ? '\nAllowances:\n' + approvalEmailPreview.candidate.salary_proposal.allowances.map((a: any) => `- ${a.name}: ${a.amount}`).join('\n') : ''}
 - Total Salary: ${approvalEmailPreview.candidate.salary_proposal.total_salary}
 
@@ -278,15 +281,18 @@ Talent Acquisition Team`;
       const baseUrl = getPublicBaseUrl();
       const verifyUrl = `${baseUrl}/verify?token=${token}&candidate=${encodeURIComponent(candidate.name)}&position=${encodeURIComponent(candidate.position)}`;
 
-      const subject = `Salary Package Verification Required - ${candidate.name} (${candidate.position})`;
+      const subject = `Package Proposal Verification Required - ${candidate.name} (${candidate.position})`;
 
       const allowancesText = candidate.salary_proposal?.allowances && candidate.salary_proposal.allowances.length > 0
         ? '\n\nAllowances:\n' + candidate.salary_proposal.allowances.map((a: any) => `- ${a.name}: ${a.amount}`).join('\n')
         : '';
 
+      const companyText = candidate.salary_proposal?.company ? `\n- Company: ${candidate.salary_proposal.company}` : '';
+      const contractText = candidate.salary_proposal?.contractPeriod ? `\n- Contract Period: ${candidate.salary_proposal.contractPeriod}` : '';
+
       const body = `Dear Verifier,
 
-A salary package requires your verification and approval.
+A package proposal requires your verification and approval.
 
 Candidate Information:
 - Name: ${candidate.name}
@@ -297,7 +303,7 @@ Assessment & Background Check:
 - Assessment Status: ${candidate.assessment_status}${candidate.assessment_score ? `\n- Assessment Score: ${candidate.assessment_score}` : ''}
 - Background Check: ${candidate.background_check_status}
 
-Proposed Salary Package:
+Proposed Package Details:${companyText}${contractText}
 - Basic Salary: ${candidate.salary_proposal?.basic_salary || 'N/A'}${allowancesText}
 - Total Salary: ${candidate.salary_proposal?.total_salary || 'N/A'}
 
@@ -1034,7 +1040,7 @@ ${emailPreview.senderName}`;
                               <div className="bg-white border border-cyan-200 rounded-lg p-4">
                                 <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
                                   <DollarSign className="w-4 h-4 text-cyan-600" />
-                                  Phase 4: Salary Package Preparation
+                                  Phase 4: Package Proposal Preparation
                                 </h4>
 
                                 {showSalaryForm === candidate.candidate_id ? (
@@ -1066,7 +1072,7 @@ ${emailPreview.senderName}`;
                                     className="w-full px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors text-sm flex items-center justify-center gap-2"
                                   >
                                     <DollarSign className="w-4 h-4" />
-                                    Prepare Salary Package
+                                    Prepare Package Proposal
                                   </button>
                                 )}
                               </div>
@@ -1074,11 +1080,59 @@ ${emailPreview.senderName}`;
 
                             {candidate.salary_proposal && candidate.current_step === 'Salary Package Prepared' && (
                               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                                <h4 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
-                                  <CheckCircle className="w-4 h-4" />
-                                  Salary Package Saved
-                                </h4>
+                                <div className="flex items-center justify-between mb-3">
+                                  <h4 className="font-semibold text-green-800 flex items-center gap-2">
+                                    <CheckCircle className="w-4 h-4" />
+                                    Package Proposal Saved
+                                  </h4>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => {
+                                        setShowSalaryForm(candidate.candidate_id);
+                                        setSalaryFormData({
+                                          basicSalary: candidate.salary_proposal.basic_salary || '',
+                                          allowances: candidate.salary_proposal.allowances || []
+                                        });
+                                      }}
+                                      className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs flex items-center gap-1"
+                                    >
+                                      <Edit2 className="w-3 h-3" />
+                                      Edit
+                                    </button>
+                                    <button
+                                      onClick={async () => {
+                                        if (confirm('Are you sure you want to delete this package proposal?')) {
+                                          try {
+                                            await saveSalaryProposal(candidate.candidate_id, null);
+                                            showNotification('Package proposal deleted successfully', 'success');
+                                            await loadCandidates();
+                                          } catch (error) {
+                                            showNotification('Failed to delete package proposal', 'error');
+                                          }
+                                        }
+                                      }}
+                                      className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-xs flex items-center gap-1"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                      Delete
+                                    </button>
+                                  </div>
+                                </div>
                                 <div className="space-y-3 text-sm">
+                                  {candidate.salary_proposal.company && (
+                                    <div className="bg-white rounded p-3">
+                                      <div className="font-semibold text-slate-800 mb-1">Company</div>
+                                      <div className="text-slate-600 font-medium">{candidate.salary_proposal.company}</div>
+                                    </div>
+                                  )}
+
+                                  {candidate.salary_proposal.contractPeriod && (
+                                    <div className="bg-white rounded p-3">
+                                      <div className="font-semibold text-slate-800 mb-1">Contract Period</div>
+                                      <div className="text-slate-600 font-medium">{candidate.salary_proposal.contractPeriod}</div>
+                                    </div>
+                                  )}
+
                                   <div className="bg-white rounded p-3">
                                     <div className="font-semibold text-slate-800 mb-1">Basic Salary</div>
                                     <div className="text-slate-600 font-medium">{candidate.salary_proposal.basic_salary}</div>
@@ -1582,20 +1636,20 @@ ${emailPreview.senderName}`;
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <span className="font-medium text-slate-700">Subject:</span>
-                  <span className="text-slate-600">Salary Package Verification Required - {verificationEmailPreview.candidateName} ({verificationEmailPreview.position})</span>
+                  <span className="text-slate-600">Package Proposal Verification Required - {verificationEmailPreview.candidateName} ({verificationEmailPreview.position})</span>
                 </div>
               </div>
 
               <div className="border border-slate-200 rounded-lg p-6 bg-white">
                 <div className="space-y-4">
                   <div className="bg-gradient-to-r from-cyan-600 to-cyan-700 text-white p-6 rounded-lg text-center">
-                    <h1 className="text-2xl font-bold">Salary Package Verification</h1>
+                    <h1 className="text-2xl font-bold">Package Proposal Verification</h1>
                   </div>
 
                   <div className="space-y-4 text-slate-700">
                     <p>Dear Verifier,</p>
 
-                    <p>A salary package requires your verification and approval.</p>
+                    <p>A package proposal requires your verification and approval.</p>
 
                     <div className="bg-slate-50 border-l-4 border-cyan-600 p-4 rounded">
                       <h3 className="font-semibold text-slate-800 mb-2">Candidate Information</h3>
@@ -1618,8 +1672,20 @@ ${emailPreview.senderName}`;
                     </div>
 
                     <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 p-4 rounded">
-                      <h3 className="font-semibold text-slate-800 mb-3">Proposed Salary Package</h3>
+                      <h3 className="font-semibold text-slate-800 mb-3">Proposed Package Details</h3>
                       <div className="space-y-2 text-sm">
+                        {verificationEmailPreview.salaryProposal?.company && (
+                          <div className="flex justify-between">
+                            <span>Company:</span>
+                            <span className="font-semibold">{verificationEmailPreview.salaryProposal.company}</span>
+                          </div>
+                        )}
+                        {verificationEmailPreview.salaryProposal?.contractPeriod && (
+                          <div className="flex justify-between">
+                            <span>Contract Period:</span>
+                            <span className="font-semibold">{verificationEmailPreview.salaryProposal.contractPeriod}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between">
                           <span>Basic Salary:</span>
                           <span className="font-semibold">{verificationEmailPreview.salaryProposal?.basic_salary || 'N/A'}</span>
@@ -1758,8 +1824,20 @@ ${emailPreview.senderName}`;
 
                     {approvalEmailPreview.candidate.salary_proposal && (
                       <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 p-4 rounded">
-                        <h3 className="font-semibold text-slate-800 mb-3">Proposed Salary Package</h3>
+                        <h3 className="font-semibold text-slate-800 mb-3">Proposed Package Details</h3>
                         <div className="space-y-2 text-sm">
+                          {approvalEmailPreview.candidate.salary_proposal.company && (
+                            <div className="flex justify-between">
+                              <span>Company:</span>
+                              <span className="font-semibold">{approvalEmailPreview.candidate.salary_proposal.company}</span>
+                            </div>
+                          )}
+                          {approvalEmailPreview.candidate.salary_proposal.contractPeriod && (
+                            <div className="flex justify-between">
+                              <span>Contract Period:</span>
+                              <span className="font-semibold">{approvalEmailPreview.candidate.salary_proposal.contractPeriod}</span>
+                            </div>
+                          )}
                           <div className="flex justify-between">
                             <span>Basic Salary:</span>
                             <span className="font-semibold">{approvalEmailPreview.candidate.salary_proposal.basic_salary}</span>
