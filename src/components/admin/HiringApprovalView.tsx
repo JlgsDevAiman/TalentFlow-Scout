@@ -1,5 +1,5 @@
 import { useState, useEffect, Fragment } from 'react';
-import { RefreshCw, Search, Users, CheckCircle, Clock, AlertCircle, Mail, FileCheck, DollarSign, Send, ChevronDown, ChevronUp, X, Eye, Upload, Download, Plus, Edit2, Trash2, RotateCcw } from 'lucide-react';
+import { RefreshCw, Search, Users, CheckCircle, Clock, AlertCircle, Mail, FileCheck, DollarSign, Send, ChevronDown, ChevronUp, X, Eye, Upload, Download, Plus, Edit2, Trash2, RotateCcw, Shield } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { sendAssessmentNotification, uploadAssessmentReport, deleteAssessmentReport, updateAssessmentScore, updateAssessmentStatus, updateBackgroundCheckStatus, updateCurrentStep, uploadBackgroundCheckDocument, deleteBackgroundCheckDocument, saveSalaryProposal, sendVerificationRequest, updateVerificationDecision, sendApprovalRequest, HiringCandidate as ImportedHiringCandidate } from '../../services/hiringFlowService';
 import SmartSalaryAnalysis from '../hiring/SmartSalaryAnalysis';
@@ -1164,30 +1164,66 @@ ${emailPreview.senderName}`;
                               </div>
                             )}
 
-                            {candidate.approvals?.verifier && (
+                            {(candidate.approvals?.verifier || (candidate.verifier_email && (candidate.current_step?.includes('Ready for Recommendation') || candidate.current_step?.includes('Ready for Approval')))) && (
                               <div className={`rounded-lg p-4 border ${
-                                candidate.approvals.verifier.decision === 'Approved' ? 'bg-green-50 border-green-200' :
-                                candidate.approvals.verifier.decision === 'Rejected' ? 'bg-red-50 border-red-200' :
-                                'bg-amber-50 border-amber-200'
+                                candidate.approvals?.verifier?.decision === 'Approved' ? 'bg-green-50 border-green-200' :
+                                candidate.approvals?.verifier?.decision === 'Rejected' ? 'bg-red-50 border-red-200' :
+                                candidate.approvals?.verifier ? 'bg-amber-50 border-amber-200' :
+                                'bg-blue-50 border-blue-200'
                               }`}>
-                                <h4 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
-                                  <CheckCircle className="w-4 h-4" />
-                                  Verifier Decision
+                                <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
+                                  <Shield className="w-4 h-4 text-cyan-600" />
+                                  Phase 5: Salary Verification Status
                                 </h4>
-                                <div className="text-sm space-y-1">
-                                  <div>
-                                    <span className="font-medium">Decision:</span>{' '}
-                                    <span className={`font-semibold ${
-                                      candidate.approvals.verifier.decision === 'Approved' ? 'text-green-700' :
-                                      candidate.approvals.verifier.decision === 'Rejected' ? 'text-red-700' :
-                                      'text-amber-700'
-                                    }`}>
-                                      {candidate.approvals.verifier.decision}
-                                    </span>
+
+                                <div className="space-y-2 text-sm">
+                                  <div className="bg-white rounded p-3">
+                                    <div className="flex justify-between items-start">
+                                      <div>
+                                        <p className="text-xs text-slate-500 font-medium">Verifier</p>
+                                        <p className="text-sm text-slate-900 font-semibold">{candidate.verifier_email || 'Not assigned'}</p>
+                                      </div>
+                                      <div className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                        candidate.approvals?.verifier?.decision === 'Approved' ? 'bg-green-200 text-green-800' :
+                                        candidate.approvals?.verifier?.decision === 'Rejected' ? 'bg-red-200 text-red-800' :
+                                        candidate.approvals?.verifier?.decision ? 'bg-amber-200 text-amber-800' :
+                                        'bg-blue-200 text-blue-800'
+                                      }`}>
+                                        {candidate.approvals?.verifier?.decision || 'Completed'}
+                                      </div>
+                                    </div>
                                   </div>
-                                  {candidate.approvals.verifier.comment && (
-                                    <div>
-                                      <span className="font-medium">Comment:</span> {candidate.approvals.verifier.comment}
+
+                                  {candidate.salary_proposal && (
+                                    <div className="bg-white rounded p-3">
+                                      <p className="text-xs text-slate-500 font-medium mb-2">Proposed Salary Package</p>
+                                      <div className="space-y-1 text-xs">
+                                        <div className="flex justify-between">
+                                          <span className="text-slate-600">Basic Salary:</span>
+                                          <span className="font-semibold text-slate-900">{candidate.salary_proposal.basic_salary}</span>
+                                        </div>
+                                        {candidate.salary_proposal.allowances && candidate.salary_proposal.allowances.length > 0 && (
+                                          <>
+                                            {candidate.salary_proposal.allowances.map((allowance: any, index: number) => (
+                                              <div key={index} className="flex justify-between">
+                                                <span className="text-slate-600">{allowance.name}:</span>
+                                                <span className="font-medium text-slate-800">{allowance.amount}</span>
+                                              </div>
+                                            ))}
+                                          </>
+                                        )}
+                                        <div className="flex justify-between pt-1 border-t border-slate-200">
+                                          <span className="font-semibold text-slate-700">Total:</span>
+                                          <span className="font-bold text-green-600">{candidate.salary_proposal.total_salary}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {candidate.approvals?.verifier?.comment && (
+                                    <div className="bg-white rounded p-3">
+                                      <p className="text-xs text-slate-500 font-medium mb-1">Verifier Comment</p>
+                                      <p className="text-sm text-slate-700">{candidate.approvals.verifier.comment}</p>
                                     </div>
                                   )}
                                 </div>
