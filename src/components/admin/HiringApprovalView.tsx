@@ -1194,7 +1194,7 @@ ${emailPreview.senderName}`;
                               </div>
                             )}
 
-                            {candidate.approvals?.verifier && (
+                            {candidate.approvals?.verifier?.decision === 'Approved' && (
                               <RecommendationSection
                                 candidate={candidate}
                                 onSuccess={() => {
