@@ -66,10 +66,17 @@ Deno.serve(async (req: Request) => {
 
     const updates: any = {
       approvals: approvals,
+      verification_decision: decision,
+      verification_decision_at: new Date().toISOString(),
+      verification_comments: comment || '',
     };
 
     if (decision === 'Approved') {
-      updates.current_step = 'Ready for Recommendation – Hiring Manager 1';
+      updates.current_step = 'Ready for Approval – Hiring Manager 1';
+    } else if (decision === 'Rejected') {
+      updates.current_step = 'Verification Rejected';
+    } else if (decision === 'Request Change') {
+      updates.current_step = 'Verification - Changes Requested';
     }
 
     const { error: updateError } = await supabase

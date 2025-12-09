@@ -1201,16 +1201,46 @@ ${emailPreview.senderName}`;
                                   Phase 5: Awaiting Verification
                                 </h4>
                                 <div className="space-y-3 text-sm">
-                                  <div className="bg-amber-50 border border-amber-200 rounded p-3">
+                                  <div className={`rounded p-3 border ${
+                                    candidate.verification_decision === 'Approved' ? 'bg-green-50 border-green-200' :
+                                    candidate.verification_decision === 'Rejected' ? 'bg-red-50 border-red-200' :
+                                    candidate.verification_decision === 'Request Change' ? 'bg-amber-50 border-amber-300' :
+                                    'bg-amber-50 border-amber-200'
+                                  }`}>
                                     <div className="flex items-center justify-between">
                                       <div>
-                                        <p className="text-xs text-amber-600 font-medium">Verifier</p>
-                                        <p className="text-sm text-amber-900 font-semibold">{candidate.verifier_email}</p>
+                                        <p className={`text-xs font-medium ${
+                                          candidate.verification_decision === 'Approved' ? 'text-green-600' :
+                                          candidate.verification_decision === 'Rejected' ? 'text-red-600' :
+                                          candidate.verification_decision === 'Request Change' ? 'text-amber-700' :
+                                          'text-amber-600'
+                                        }`}>Verifier</p>
+                                        <p className={`text-sm font-semibold ${
+                                          candidate.verification_decision === 'Approved' ? 'text-green-900' :
+                                          candidate.verification_decision === 'Rejected' ? 'text-red-900' :
+                                          candidate.verification_decision === 'Request Change' ? 'text-amber-900' :
+                                          'text-amber-900'
+                                        }`}>{candidate.verifier_email}</p>
                                       </div>
-                                      <div className="px-3 py-1 bg-amber-200 text-amber-800 text-xs font-medium rounded-full">
-                                        Pending
+                                      <div className={`px-3 py-1 text-xs font-medium rounded-full ${
+                                        candidate.verification_decision === 'Approved' ? 'bg-green-200 text-green-800' :
+                                        candidate.verification_decision === 'Rejected' ? 'bg-red-200 text-red-800' :
+                                        candidate.verification_decision === 'Request Change' ? 'bg-amber-300 text-amber-900' :
+                                        'bg-amber-200 text-amber-800'
+                                      }`}>
+                                        {candidate.verification_decision || 'Pending'}
                                       </div>
                                     </div>
+                                    {candidate.verification_decision_at && (
+                                      <p className="text-xs text-slate-600 mt-2">
+                                        Decision made: {new Date(candidate.verification_decision_at).toLocaleString()}
+                                      </p>
+                                    )}
+                                    {candidate.verification_comments && (
+                                      <div className="mt-2 p-2 bg-white rounded text-xs text-slate-700">
+                                        <strong>Comments:</strong> {candidate.verification_comments}
+                                      </div>
+                                    )}
                                   </div>
 
                                   {candidate.salary_proposal && (

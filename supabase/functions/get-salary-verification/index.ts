@@ -39,7 +39,7 @@ Deno.serve(async (req: Request) => {
     if (token && !candidateId) {
       const { data: tokenData, error: tokenError } = await supabase
         .from('verification_tokens')
-        .select('candidate_id')
+        .select('candidate_id, used, expires_at')
         .eq('token', token)
         .single();
 
@@ -48,6 +48,27 @@ Deno.serve(async (req: Request) => {
           JSON.stringify({ error: 'Invalid or expired token' }),
           {
             status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+
+      if (tokenData.used) {
+        return new Response(
+          JSON.stringify({ error: 'This verification link has already been used' }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+
+      const expiresAt = new Date(tokenData.expires_at);
+      if (expiresAt < new Date()) {
+        return new Response(
+          JSON.stringify({ error: 'This verification link has expired' }),
+          {
+            status: 400,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           }
         );
@@ -161,13 +182,22 @@ Deno.serve(async (req: Request) => {
       candidate: {
         name: candidateData.name,
         position: candidateData.position,
-        years_experience: parseInt(salaryProposal.years_of_experience) || 0,
+        email: mainCandidate?.email || 'N/A',
+        phone: mainCandidate?.phone || 'N/A',
+        years_experience: parseInt(salaryProposal.years_of_experience) || mainCandidate?.years_experience || 0,
         current_employer: mainCandidate?.current_company || 'N/A',
         current_salary_basic: currentBasic,
         current_salary_allowances: currentAllowances,
         current_salary_total: currentTotal,
+        expected_salary: parseNumber(mainCandidate?.expected_salary),
+        ai_fit_score: mainCandidate?.ai_fit_score || 0,
+        ai_fit_comment: mainCandidate?.ai_fit_comment || 'N/A',
+        business_unit: mainCandidate?.business_unit || 'N/A',
+        job_category: mainCandidate?.job_category || 'N/A',
       },
       salary_proposal: {
+        company: salaryProposal.company || 'N/A',
+        contractPeriod: salaryProposal.contractPeriod || 'N/A',
         basic_salary: basicSalary,
         allowances_total: allowancesTotal,
         total_salary: totalSalary,
@@ -184,6 +214,7 @@ Deno.serve(async (req: Request) => {
       assessment: {
         status: assessmentStatus,
         score: assessmentScore,
+        report_url: candidateData.assessment_report_url || null,
         strengths: [
           'Strong technical skills',
           'Excellent communication',
@@ -196,9 +227,11 @@ Deno.serve(async (req: Request) => {
       background_check: {
         status: candidateData.background_check_status || 'Pending',
         notes: 'All verifications completed successfully. No issues found.',
+        document_url: candidateData.background_check_document_url || null,
       },
       meta: {
         recruiter_name: candidateData.recruiter || 'Recruitment Team',
+        recruiter_email: candidateData.recruiter_email || '',
       },
     };
 

@@ -5,11 +5,18 @@ interface CandidateData {
   candidate: {
     name: string;
     position: string;
+    email: string;
+    phone: string;
     years_experience: number;
     current_employer: string;
     current_salary_basic: number;
     current_salary_allowances: number;
     current_salary_total: number;
+    expected_salary: number;
+    ai_fit_score: number;
+    ai_fit_comment: string;
+    business_unit: string;
+    job_category: string;
   };
   salary_proposal: {
     company?: string;
@@ -30,15 +37,18 @@ interface CandidateData {
   assessment: {
     status: string;
     score: string;
+    report_url: string | null;
     strengths: string[];
     development_areas: string[];
   };
   background_check: {
     status: string;
     notes: string;
+    document_url: string | null;
   };
   meta: {
     recruiter_name: string;
+    recruiter_email: string;
   };
 }
 
@@ -298,6 +308,14 @@ export default function SalaryVerification() {
                 <p className="text-sm text-slate-600 mb-1">Position Applied</p>
                 <p className="font-semibold text-slate-800">{candidate.position}</p>
               </div>
+              <div>
+                <p className="text-sm text-slate-600 mb-1">Email</p>
+                <p className="font-semibold text-slate-800">{candidate.email}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-600 mb-1">Phone</p>
+                <p className="font-semibold text-slate-800">{candidate.phone}</p>
+              </div>
               {salary_proposal.company && (
                 <div>
                   <p className="text-sm text-slate-600 mb-1">Company</p>
@@ -311,6 +329,14 @@ export default function SalaryVerification() {
                 </div>
               )}
               <div>
+                <p className="text-sm text-slate-600 mb-1">Business Unit</p>
+                <p className="font-semibold text-slate-800">{candidate.business_unit}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-600 mb-1">Job Category</p>
+                <p className="font-semibold text-slate-800">{candidate.job_category}</p>
+              </div>
+              <div>
                 <p className="text-sm text-slate-600 mb-1">Current Employer</p>
                 <p className="font-semibold text-slate-800">{candidate.current_employer || 'N/A'}</p>
               </div>
@@ -320,6 +346,39 @@ export default function SalaryVerification() {
               </div>
             </div>
           </div>
+
+          {/* AI Fit Score */}
+          {candidate.ai_fit_score > 0 && (
+            <div className="bg-white rounded-lg border border-slate-200 p-4">
+              <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                <Award className="w-5 h-5 text-purple-600" />
+                AI Fit Analysis
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600">AI Fit Score</span>
+                  <span className={`text-2xl font-bold ${
+                    candidate.ai_fit_score >= 80 ? 'text-green-600' :
+                    candidate.ai_fit_score >= 60 ? 'text-amber-600' : 'text-red-600'
+                  }`}>{candidate.ai_fit_score}/100</span>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-3">
+                  <div
+                    className={`h-3 rounded-full ${
+                      candidate.ai_fit_score >= 80 ? 'bg-green-500' :
+                      candidate.ai_fit_score >= 60 ? 'bg-amber-500' : 'bg-red-500'
+                    }`}
+                    style={{width: `${candidate.ai_fit_score}%`}}
+                  ></div>
+                </div>
+                {candidate.ai_fit_comment !== 'N/A' && (
+                  <div className="bg-slate-50 rounded p-3 text-sm text-slate-700">
+                    {candidate.ai_fit_comment}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Assessment & Background Check Summary */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
